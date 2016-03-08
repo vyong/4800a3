@@ -6,14 +6,14 @@
 #include <string.h>
 #include <math.h>
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glx.h>
-#include <GL/glut.h>
+// #include <GL/gl.h>
+// #include <GL/glu.h>
+// #include <GL/glx.h>
+// #include <GL/glut.h>
 
-// #include <OpenGL/gl.h>
-// #include <OpenGL/glu.h>
-// #include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
 
 struct Vertexes {
 	float x, y, z;
@@ -53,12 +53,12 @@ float deltaAngle = 0.0f;
 float deltaMove = 0;
 
 GLubyte  Image[64][64][4];
-GLuint   textureID[1];
+GLuint   textureID[7];
 
 Triangle * head;
 
 void lightRotation(void) {
-	spin = spin + 0.3;
+	spin = spin + 1;
 
 	if(spin >= 360) {
 		spin = spin - 360;
@@ -128,7 +128,7 @@ Triangle * curr = head;
 	/* turn texturing on */
 	if (textures == 1) {
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, textureID[0]);
+		glBindTexture(GL_TEXTURE_2D, textureID[0]); //change texture
 	/* if textured, then use white as base colour */
 		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
 	}
@@ -155,67 +155,73 @@ Triangle * curr = head;
 
 	glTranslatef(5,0.5,5);
 
-	glutSolidCube(1);
+	//glutSolidCube(1);
+
+	glBegin(GL_TRIANGLES);
+		//Bottom
+		glNormal3f(0.0, -1.0, 0.0);
+		glVertex3f(0.5, -0.5, -0.5);
+		glVertex3f(0.5, -0.5, 0.5);
+		glVertex3f(-0.5, -0.5, 0.5);
+		glVertex3f(0.5, -0.5, -0.5);
+		glVertex3f(-0.5, -0.5, 0.5);
+		glVertex3f(-0.5, -0.5, -0.5);
+
+		//Top
+		glNormal3f(0.0, 1.0, 0.0);
+		glVertex3f(0.5, 0.5, -0.5);
+		glVertex3f(-0.5, 0.5, -0.5);
+		glVertex3f(-0.5, 0.5, 0.5);
+		glVertex3f(0.5, 0.5, -0.5);
+		glVertex3f(-0.5, 0.5, 0.5);
+		glVertex3f(0.5, 0.5, 0.5);
+
+		//Right
+		glNormal3f(1.0, 0.0, 0.0);
+		glVertex3f(0.5, -0.5, -0.5);
+		glVertex3f(0.5, 0.5, -0.5);
+		glVertex3f(0.5, 0.5, 0.5);
+		glVertex3f(0.5, -0.5, -0.5);
+		glVertex3f(0.5, 0.5, 0.5);
+		glVertex3f(0.5, -0.5, 0.5);
+
+		//Front
+		glNormal3f(0.0, 0.0, 1.0);
+		glVertex3f(0.5, -0.5, 0.5);
+		glVertex3f(0.5, 0.5, 0.5);
+		glVertex3f(-0.5, 0.5, 0.5);
+		glVertex3f(0.5, -0.5, 0.5);
+		glVertex3f(-0.5, 0.5, 0.5);
+		glVertex3f(-0.5, -0.5, 0.5);
+
+		//Left
+		glNormal3f(-1.0, 0.0, 0.0);
+		glVertex3f(-0.5, -0.5, 0.5);
+		glVertex3f(-0.5, 0.5, 0.5);
+		glVertex3f(-0.5, 0.5, -0.5);
+		glVertex3f(-0.5, -0.5, 0.5);
+		glVertex3f(-0.5, 0.5, -0.5);
+		glVertex3f(-0.5, -0.5, -0.5);
+
+		//Back
+		glNormal3f(0.0, 0.0, -1.0);
+		glVertex3f(0.5, 0.5, -0.5);
+		glVertex3f(0.5, -0.5, -0.5);
+		glVertex3f(-0.5, -0.5, -0.5);
+		glVertex3f(0.5, 0.5, -0.5);
+		glVertex3f(-0.5, -0.5, -0.5);
+		glVertex3f(-0.5, 0.5, -0.5);
+	glEnd();
 
 	glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
-	glTranslated (1.0, 0.0, 3);
+	glTranslated (1.0, 3.0, 3.0);
 	glDisable (GL_LIGHTING);
 	glColor3f (0.0, 1.0, 1.0);
 	glutIdleFunc(lightRotation);
 	glutWireCube (0.1);
 	glEnable (GL_LIGHTING);
-
-	// //polygon cube
-	// glBegin(GL_POLYGON);
-	//  glNormal3d(0, 0, 1);
-	// 	glVertex3f(  0.5, -0.5, -0.5 );
-	// 	glVertex3f(  0.5,  0.5, -0.5 );
-	// 	glVertex3f( -0.5,  0.5, -0.5 );
-	// 	glVertex3f( -0.5, -0.5, -0.5 );
-	// glEnd();
-
-	// //Back
-	// glBegin(GL_POLYGON);
-	// 	glVertex3f(  0.5, -0.5, 0.5 );
-	// 	glVertex3f(  0.5,  0.5, 0.5 );
-	// 	glVertex3f( -0.5,  0.5, 0.5 );
-	// 	glVertex3f( -0.5, -0.5, 0.5 );
-	// glEnd();
-	 
-	// //Right
-	// glBegin(GL_POLYGON);
-	// 	glVertex3f( 0.5, -0.5, -0.5 );
-	// 	glVertex3f( 0.5,  0.5, -0.5 );
-	// 	glVertex3f( 0.5,  0.5,  0.5 );
-	// 	glVertex3f( 0.5, -0.5,  0.5 );
-	// glEnd();
-	 
-	// //Left
-	// glBegin(GL_POLYGON);
-	// 	glVertex3f( -0.5, -0.5,  0.5 );
-	// 	glVertex3f( -0.5,  0.5,  0.5 );
-	// 	glVertex3f( -0.5,  0.5, -0.5 );
-	// 	glVertex3f( -0.5, -0.5, -0.5 );
-	// glEnd();
-	 
-	// // Top
-	// glBegin(GL_POLYGON);
-	// 	glVertex3f(  0.5,  0.5,  0.5 );
-	// 	glVertex3f(  0.5,  0.5, -0.5 );
-	// 	glVertex3f( -0.5,  0.5, -0.5 );
-	// 	glVertex3f( -0.5,  0.5,  0.5 );
-	// glEnd();
-	 
-	// // Bottom
-	// glBegin(GL_POLYGON);
-	// 	glVertex3f(  0.5, -0.5, -0.5 );
-	// 	glVertex3f(  0.5, -0.5,  0.5 );
-	// 	glVertex3f( -0.5, -0.5,  0.5 );
-	// 	glVertex3f( -0.5, -0.5, -0.5 );
-	// glEnd();
-	 
 
 	// if(heightColor == 1 && randomColour == 0){
 	// 	while(curr != NULL){
@@ -492,14 +498,14 @@ int  red, green, blue;
 	}
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glGenTextures(1,textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID[0]);
+	glGenTextures(7,textureID);//
+	glBindTexture(GL_TEXTURE_2D, textureID[0]); //loop to include 7 files
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA,
-		GL_UNSIGNED_BYTE, Image);
+		GL_UNSIGNED_BYTE, Image); //64 is from file
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
