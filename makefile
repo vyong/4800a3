@@ -15,3 +15,5 @@ ubuntu: a3.c
 
 run:
 	./a3
+
+# https://www.opengl.org/archives/resources/code/samples/mjktips/TexShadowReflectLight.html

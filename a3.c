@@ -6,14 +6,14 @@
 #include <string.h>
 #include <math.h>
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glx.h>
-#include <GL/glut.h>
+// #include <GL/gl.h>
+// #include <GL/glu.h>
+// #include <GL/glx.h>
+// #include <GL/glut.h>
 
-// #include <OpenGL/gl.h>
-// #include <OpenGL/glu.h>
-// #include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
 
 struct Vertexes {
 	float x, y, z;
@@ -27,19 +27,12 @@ struct Normals {
 };
 typedef struct Normals Normal;
 
-struct Triangles {
-	struct Vertexes *v1, *v2, *v3;
-	struct Normals * normal;
-	struct Triangles * nextTri;
-};
-typedef struct Triangles Triangle;
-
 	/* flags used to control the appearance of the image */
 int lineDrawing = 0;	// draw polygons as solid or lines
 int lighting = 1;	// use diffuse and specular lighting
 int smoothShading = 1;  // smooth or flat shading
 int textures = 0;
-double spin = 0;
+float spin = 0, lightHeight = 5;
 
 float **heightMap;
 int width, height, depth, maxDepth = 0, lButtonPressed = 0, rButtonPressed = 0;
@@ -52,12 +45,27 @@ float deltaMove = 0;
 
 GLubyte  Image[64][64][4];
 GLuint   textureID[7];
+static int directionalLight = 1;
+static GLfloat lightPosition[4];
+static GLfloat floorPlane[4];
+static GLfloat floorShadow[4][4];
+static GLfloat floorVertices[4][3] = {
+	{0,-0.001,10},
+	{10,-0.001,10},
+	{10,-0.001, 0},
+	{0,-0.001, 0},
+};
 
-Triangle * head;
+enum {
+  X, Y, Z, W
+};
+enum {
+  A, B, C, D
+};
 
 void lightRotation(void) {
-	//spin = spin + 1; /*MAC LINE */
-	spin = spin + 0.1;
+	spin = spin + 1; /*MAC LINE */
+	//spin = spin + 0.1;
 
 	if(spin >= 360) {
 		spin = spin - 360;
@@ -69,7 +77,7 @@ Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3,
 	float vector1x, vector1y, vector1z, vector2x, vector2y, vector2z;
 	Normal * calculatedNormal;
 
-	calculatedNormal = (Normal *)malloc(sizeof(Normal));
+	//calculatedNormal = (Normal *)malloc(sizeof(Normal));
 
 	vector1x = x2 - x1;
 	vector1y = y2 - y1;
@@ -85,6 +93,56 @@ Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3,
 
 	return calculatedNormal;
 }
+
+/* Find the plane equation given 3 points. */
+void findPlane(GLfloat plane[4], GLfloat v0[3], GLfloat v1[3], GLfloat v2[3]){
+	GLfloat vec0[3], vec1[3];
+
+	/* Need 2 vectors to find cross product. */
+	vec0[X] = v1[X] - v0[X];
+	vec0[Y] = v1[Y] - v0[Y];
+	vec0[Z] = v1[Z] - v0[Z];
+
+	vec1[X] = v2[X] - v0[X];
+	vec1[Y] = v2[Y] - v0[Y];
+	vec1[Z] = v2[Z] - v0[Z];
+
+	/* find cross product to get A, B, and C of plane equation */
+	plane[A] = vec0[Y] * vec1[Z] - vec0[Z] * vec1[Y];
+	plane[B] = -(vec0[X] * vec1[Z] - vec0[Z] * vec1[X]);
+	plane[C] = vec0[X] * vec1[Y] - vec0[Y] * vec1[X];
+
+	plane[D] = -(plane[A] * v0[X] + plane[B] * v0[Y] + plane[C] * v0[Z]);
+}
+
+void shadowMatrix(GLfloat shadowMat[4][4], GLfloat groundplane[4], GLfloat lightpos[4]) {
+	GLfloat dot;
+
+	/* Find dot product between light position vector and ground plane normal. */
+	dot = groundplane[X] * lightpos[X] + groundplane[Y] * lightpos[Y] + groundplane[Z] * lightpos[Z] + groundplane[W] * lightpos[W];
+
+	shadowMat[0][0] = dot - lightpos[X] * groundplane[X];
+	shadowMat[1][0] = 0.f - lightpos[X] * groundplane[Y];
+	shadowMat[2][0] = 0.f - lightpos[X] * groundplane[Z];
+	shadowMat[3][0] = 0.f - lightpos[X] * groundplane[W];
+
+	shadowMat[X][1] = 0.f - lightpos[Y] * groundplane[X];
+	shadowMat[1][1] = dot - lightpos[Y] * groundplane[Y];
+	shadowMat[2][1] = 0.f - lightpos[Y] * groundplane[Z];
+	shadowMat[3][1] = 0.f - lightpos[Y] * groundplane[W];
+
+	shadowMat[X][2] = 0.f - lightpos[Z] * groundplane[X];
+	shadowMat[1][2] = 0.f - lightpos[Z] * groundplane[Y];
+	shadowMat[2][2] = dot - lightpos[Z] * groundplane[Z];
+	shadowMat[3][2] = 0.f - lightpos[Z] * groundplane[W];
+
+	shadowMat[X][3] = 0.f - lightpos[W] * groundplane[X];
+	shadowMat[1][3] = 0.f - lightpos[W] * groundplane[Y];
+	shadowMat[2][3] = 0.f - lightpos[W] * groundplane[Z];
+	shadowMat[3][3] = dot - lightpos[W] * groundplane[W];
+
+}
+
 
 /*  Initialize material property and light source.
  */
@@ -167,7 +225,7 @@ Normal * normals;
 	glPushMatrix();
 
 	glTranslatef(5,0.5,5);
-	normals = (Normal *)malloc(sizeof(Normal));
+	//normals = (Normal *)malloc(sizeof(Normal));
 
 	//glutSolidCube(1);
 
@@ -182,16 +240,18 @@ Normal * normals;
 		glVertex3f(0.5, -0.5, 0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
 
+		glNormal3f(0.0, -0.5, 0.0);
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 
 		//Top
-		glNormal3f(0.0, 0.5, 0.0);
+		glNormal3f(-0.5, -0.5, -0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 
+		glNormal3f(0.5, 0.5, 0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(0.5, 0.5, 0.5);
@@ -202,6 +262,7 @@ Normal * normals;
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(0.5, 0.5, 0.5);
 
+		glNormal3f(0.5, 0.0, 0.0);
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(0.5, 0.5, 0.5);
 		glVertex3f(0.5, -0.5, 0.5);
@@ -212,6 +273,7 @@ Normal * normals;
 		glVertex3f(0.5, 0.5, 0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 
+		glNormal3f(0.0, 0.0, 0.5);
 		glVertex3f(0.5, -0.5, 0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
@@ -222,6 +284,7 @@ Normal * normals;
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 
+		glNormal3f(-0.5, 0.0, 0.0);
 		glVertex3f(-0.5, -0.5, 0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
@@ -232,6 +295,7 @@ Normal * normals;
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 
+		glNormal3f(0.0, 0.0, -0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
@@ -247,6 +311,19 @@ Normal * normals;
 	glutIdleFunc(lightRotation);
 	glutWireCube (0.1);
 	glEnable (GL_LIGHTING);
+
+	  /* Reposition the light source. */
+	lightPosition[0] = 12*cos(spin);
+	lightPosition[1] = lightHeight;
+	lightPosition[2] = 12*sin(spin);
+	if (directionalLight) {
+		lightPosition[3] = 0.0;
+	} else {
+		lightPosition[3] = 1.0;
+	}
+
+	shadowMatrix(floorShadow, floorPlane, lightPosition);
+	glMultMatrixf((GLfloat *) floorShadow);
 
 	glPopMatrix ();
 
@@ -443,13 +520,13 @@ int header = 0;
 						buffer = strtok(instr, " ");
 						width = atoi(buffer);
 
-						heightMap = malloc(width * sizeof(float *));
+						//heightMap = malloc(width * sizeof(float *));
 
 						buffer = strtok(NULL, " ");
 						height = atoi(buffer);
 
 						for(x = 0; x < width; x++){
-							heightMap[x] = malloc(height * sizeof(float));
+							//heightMap[x] = malloc(height * sizeof(float));
 						}
 
 						header++;
@@ -501,9 +578,6 @@ int header = 0;
  */
 int main(int argc, char** argv)
 {
-
-	head = NULL;
-	loadTexture();
 	glutInit(&argc, argv);
 	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowPosition(80, 80);
@@ -516,6 +590,9 @@ int main(int argc, char** argv)
 	glutKeyboardFunc (keyboard);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
+
+	/* Setup floor plane for projected shadow calculations. */
+	findPlane(floorPlane, floorVertices[1], floorVertices[2], floorVertices[3]);
 
 	glutMainLoop();
 	return 0; 
