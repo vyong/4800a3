@@ -125,6 +125,14 @@ Triangle * curr = head;
 	else 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	//draw plane
+	glBegin(GL_QUADS);
+		glVertex3f( 0,-0.001, 0);
+		glVertex3f( 0,-0.001,10);
+		glVertex3f(10,-0.001,10);
+		glVertex3f(10,-0.001, 0);
+	glEnd();
+
 	/* turn texturing on */
 	if (textures == 1) {
 		glEnable(GL_TEXTURE_2D);
@@ -138,20 +146,9 @@ Triangle * curr = head;
 
 	glPushMatrix();
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, light_gray);
-
-
-	//draw plane
-	glBegin(GL_QUADS);
-		glVertex3f( 0,-0.001, 0);
-		glVertex3f( 0,-0.001,10);
-		glVertex3f(10,-0.001,10);
-		glVertex3f(10,-0.001, 0);
-	glEnd();
-
 	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
 	glTranslatef(5,0.5,5);
 
@@ -159,55 +156,61 @@ Triangle * curr = head;
 
 	glBegin(GL_TRIANGLES);
 		//Bottom
-		glNormal3f(0.0, -1.0, 0.0);
+		glNormal3f(0.0, -0.5, 0.0);
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(0.5, -0.5, 0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
+
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 
 		//Top
-		glNormal3f(0.0, 1.0, 0.0);
+		glNormal3f(0.0, 0.5, 0.0);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
+
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(0.5, 0.5, 0.5);
 
 		//Right
-		glNormal3f(1.0, 0.0, 0.0);
+		glNormal3f(0.5, 0.0, 0.0);
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(0.5, 0.5, 0.5);
+
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(0.5, 0.5, 0.5);
 		glVertex3f(0.5, -0.5, 0.5);
 
 		//Front
-		glNormal3f(0.0, 0.0, 1.0);
+		glNormal3f(0.0, 0.0, 0.5);
 		glVertex3f(0.5, -0.5, 0.5);
 		glVertex3f(0.5, 0.5, 0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
+
 		glVertex3f(0.5, -0.5, 0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(-0.5, -0.5, 0.5);
 
 		//Left
-		glNormal3f(-1.0, 0.0, 0.0);
+		glNormal3f(-0.5, 0.0, 0.0);
 		glVertex3f(-0.5, -0.5, 0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
+
 		glVertex3f(-0.5, -0.5, 0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 
 		//Back
-		glNormal3f(0.0, 0.0, -1.0);
+		glNormal3f(0.0, 0.0, -0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(0.5, -0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
+
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, -0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
@@ -217,110 +220,10 @@ Triangle * curr = head;
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
 	glTranslated (1.0, 3.0, 3.0);
-	glDisable (GL_LIGHTING);
-	glColor3f (0.0, 1.0, 1.0);
 	glutIdleFunc(lightRotation);
 	glutWireCube (0.1);
 	glEnable (GL_LIGHTING);
 
-	// if(heightColor == 1 && randomColour == 0){
-	// 	while(curr != NULL){
-	// 		bottomThirdLimit = maxDepth * 0.33;
-	// 		topThirdLimit = maxDepth * 0.67;
-	// 		glBegin(GL_TRIANGLES);
-	// 		glNormal3f(curr->normal->Nx, curr->normal->Ny, curr->normal->Nz);
-
-	// 		if(curr->v1->y <= bottomThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, brown);
-	// 		}
-	// 		else if(curr->v1->y > bottomThirdLimit && curr->v1->y < topThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, green);
-	// 		}
-	// 		else {
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, white);	
-	// 		}
-	// 		glVertex3f(curr->v1->x, curr->v1->y, curr->v1->z);
-
-	// 		if(curr->v2->y <= bottomThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, brown);
-	// 		}
-	// 		else if(curr->v2->y > bottomThirdLimit && curr->v2->y < topThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, green);
-	// 		}
-	// 		else {
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, white);	
-	// 		}
-	// 		glVertex3f(curr->v2->x, curr->v2->y, curr->v2->z);
-
-
-	// 		if(curr->v3->y <= bottomThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, brown);
-	// 		}
-	// 		else if(curr->v3->y > bottomThirdLimit && curr->v3->y < topThirdLimit){
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, green);
-	// 		}
-	// 		else {
-	// 			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
-	// 			glMaterialfv(GL_FRONT, GL_SPECULAR, white);	
-	// 		}
-	// 		glVertex3f(curr->v3->x, curr->v3->y, curr->v3->z);
-	// 		glEnd();
-
-	// 		curr = curr->nextTri;
-	// 	}
-	// }
-
-	// else if (heightColor == 0 && randomColour == 1){
-	// 	//RANDOM COLOUR!!!!!!!
-
-	// 	while(curr != NULL){
-
-	// 		randomR = (rand() % 101)/10;
-	// 		randomG = (rand() % 101)/10;
-	// 		randomB = (rand() % 101)/10;
-	// 		//printf("R:%f, G: %f, B: %f\n",randomR, randomG, randomB );
-	// 		random[0] = randomR;
-	// 		random[1] = randomB;
-	// 		random[2] = randomG;
-
-	// 		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, random);
-	// 		glMaterialfv(GL_FRONT, GL_SPECULAR, random);
-
-
-	// 		glBegin(GL_TRIANGLES);
-	// 		glNormal3f(curr->normal->Nx, curr->normal->Ny, curr->normal->Nz);
-	// 		glVertex3f(curr->v1->x, curr->v1->y, curr->v1->z);
-	// 		glVertex3f(curr->v2->x, curr->v2->y, curr->v2->z);
-	// 		glVertex3f(curr->v3->x, curr->v3->y, curr->v3->z);
-	// 		glEnd();
-
-	// 		curr = curr->nextTri;
-	// 	}
-	// }
-
-	// else{
-	// 	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
-	// 	glMaterialfv(GL_FRONT, GL_SPECULAR, light_gray);
-
-	// 	while(curr != NULL){
-	// 		glBegin(GL_TRIANGLES);
-	// 		glNormal3f(curr->normal->Nx, curr->normal->Ny, curr->normal->Nz);
-	// 		glVertex3f(curr->v1->x, curr->v1->y, curr->v1->z);
-	// 		glVertex3f(curr->v2->x, curr->v2->y, curr->v2->z);
-	// 		glVertex3f(curr->v3->x, curr->v3->y, curr->v3->z);
-	// 		glEnd();
-
-	// 		curr = curr->nextTri;
-	// 	}
-	// }
 	glPopMatrix ();
 
 	glPopMatrix ();
@@ -393,7 +296,7 @@ void keyboard(unsigned char key, int x, int y)
 			lineDrawing = 0;
 			lighting = 1;
 			smoothShading = 1;
-			textures = 0;
+			textures = 1;
 			heightColor = 0;
 			randomColour = 1;
 			init();
