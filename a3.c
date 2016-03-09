@@ -6,14 +6,14 @@
 #include <string.h>
 #include <math.h>
 
-// #include <GL/gl.h>
-// #include <GL/glu.h>
-// #include <GL/glx.h>
-// #include <GL/glut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glx.h>
+#include <GL/glut.h>
 
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
+// #include <OpenGL/gl.h>
+// #include <OpenGL/glu.h>
+// #include <GLUT/glut.h>
 
 struct Vertexes {
 	float x, y, z;
@@ -35,16 +35,14 @@ struct Triangles {
 typedef struct Triangles Triangle;
 
 	/* flags used to control the appearance of the image */
-int lineDrawing = 1;	// draw polygons as solid or lines
-int lighting = 0;	// use diffuse and specular lighting
-int smoothShading = 0;  // smooth or flat shading
+int lineDrawing = 0;	// draw polygons as solid or lines
+int lighting = 1;	// use diffuse and specular lighting
+int smoothShading = 1;  // smooth or flat shading
 int textures = 0;
-int heightColor = 0;
-int randomColour = 0;
 double spin = 0;
 
 float **heightMap;
-int width = 10, height = 10, depth = 10, maxDepth = 0, lButtonPressed = 0, rButtonPressed = 0;
+int width, height, depth, maxDepth = 0, lButtonPressed = 0, rButtonPressed = 0;
 float camX, camY, camZ;
 
 // the key states. These variables will be zero
@@ -58,12 +56,34 @@ GLuint   textureID[7];
 Triangle * head;
 
 void lightRotation(void) {
-	spin = spin + 1;
+	//spin = spin + 1; /*MAC LINE */
+	spin = spin + 0.1;
 
 	if(spin >= 360) {
 		spin = spin - 360;
 	}
 	glutPostRedisplay();
+}
+
+Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3, int y3, int z3){
+	float vector1x, vector1y, vector1z, vector2x, vector2y, vector2z;
+	Normal * calculatedNormal;
+
+	calculatedNormal = (Normal *)malloc(sizeof(Normal));
+
+	vector1x = x2 - x1;
+	vector1y = y2 - y1;
+	vector1z = z2 - z1;
+
+	vector2x = x3 - x1;
+	vector2y = y3 - y1;
+	vector2z = z3 - z1;
+
+	calculatedNormal -> Nx = vector1y * vector2z - vector2y * vector1z;
+	calculatedNormal -> Ny = vector1z * vector2x - vector2z * vector1x;
+	calculatedNormal -> Nz = vector1x * vector2y - vector2x * vector1y;
+
+	return calculatedNormal;
 }
 
 /*  Initialize material property and light source.
@@ -109,7 +129,7 @@ GLfloat position[] = { 0.0, 0.0, 1.5, 1.0 };
 
 float bottomThirdLimit, topThirdLimit;
 float randomR, randomG, randomB;
-Triangle * curr = head;
+Normal * normals;
 
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -125,6 +145,9 @@ Triangle * curr = head;
 	else 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, light_gray);
+	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 	//draw plane
 	glBegin(GL_QUADS);
 		glVertex3f( 0,-0.001, 0);
@@ -141,18 +164,16 @@ Triangle * curr = head;
 		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
 	}
 
-	if (textures == 1) 
-		glDisable(GL_TEXTURE_2D);
-
 	glPushMatrix();
+
+	glTranslatef(5,0.5,5);
+	normals = (Normal *)malloc(sizeof(Normal));
+
+	//glutSolidCube(1);
 
 	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glMaterialf(GL_FRONT, GL_SHININESS, 30);
-
-	glTranslatef(5,0.5,5);
-
-	//glutSolidCube(1);
 
 	glBegin(GL_TRIANGLES);
 		//Bottom
@@ -216,6 +237,9 @@ Triangle * curr = head;
 		glVertex3f(-0.5, 0.5, -0.5);
 	glEnd();
 
+	if (textures == 1) 
+		glDisable(GL_TEXTURE_2D);
+
 	glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
@@ -257,28 +281,22 @@ void keyboard(unsigned char key, int x, int y)
 			lighting = 0;
 			smoothShading = 0;
 			textures = 0;
-			heightColor = 0;
-			randomColour = 0;
 			init();
 			display();
 			break;
-		case '2':		// draw polygons as filled
+		case '2':		// draw polygons as outlines
+			lineDrawing = 1;
+			lighting = 0;
+			smoothShading = 0;
+			textures = 0;
+			init();
+			display();
+			break;
+		case '3':		// draw polygons as filled
 			lineDrawing = 0;
 			lighting = 0;
 			smoothShading = 0;
 			textures = 0;
-			heightColor = 0;
-			randomColour = 0;
-			init();
-			display();
-			break;
-		case '3':		// diffuse and specular lighting, flat shading
-			lineDrawing = 0;
-			lighting = 1;
-			smoothShading = 0;
-			textures = 0;
-			heightColor = 0;
-			randomColour = 0;
 			init();
 			display();
 			break;
@@ -287,8 +305,6 @@ void keyboard(unsigned char key, int x, int y)
 			lighting = 1;
 			smoothShading = 1;
 			textures = 0;
-			heightColor = 1;
-			randomColour = 0;
 			init();
 			display();
 			break;
@@ -297,8 +313,6 @@ void keyboard(unsigned char key, int x, int y)
 			lighting = 1;
 			smoothShading = 1;
 			textures = 1;
-			heightColor = 0;
-			randomColour = 1;
 			init();
 			display();
 			break;
@@ -354,17 +368,17 @@ void mouse(int button, int state, int x, int y) {
 void motion(int x, int y) {
 	if(lButtonPressed >= 0){
 
-		camX = -(x/(width/6)) * -sinf(10*(M_PI/180)) * cosf((45)*(M_PI/180));
-		camY = -(x/(depth/6)) * -sinf((45)*(M_PI/180));
-		camZ = (x/(height/6)) * cosf((10)*(M_PI/180)) * cosf((45)*(M_PI/180));
+		camX = -(x-500) * -sinf(10*(M_PI/180)) * cosf((45)*(M_PI/180));
+		camY = -(x-500) * -sinf((45)*(M_PI/180));
+		camZ = (x-500) * cosf((10)*(M_PI/180)) * cosf((45)*(M_PI/180));
 		
 
 		glMatrixMode (GL_MODELVIEW);
 		glLoadIdentity ();
 
-		gluLookAt(camX,camY,camZ,   // Camera position
-		  width/2, maxDepth/2, height/2,    // Look at point
-		  0.0, 1.0, 0.0);   // Up vector
+		gluLookAt(camX,camZ,camY,   // Camera position
+		  0, -20, 0,
+			0, 1, 0);   // Up vector
 		display ();
 	}
 
@@ -382,13 +396,77 @@ void motion(int x, int y) {
 
 void loadTexture() {
 FILE *fp;
-int  i, j;
+int  i, j, x;
 int  red, green, blue;
+char * fileName, * buffer;
+char instr[1024];
+int header = 0;
 
-	if ((fp = fopen("image.txt", "r")) == 0) {
-		printf("Error, failed to find the file named image.txt.\n");
-		exit(0);
-	} 
+	for (x = 0; x < 7; x++){
+		switch(x) {
+			case 0:
+				fileName = "brick.ppm";
+				break;
+			case 1:
+				fileName = "horrible.ppm";
+				break;
+			case 2:
+				fileName = "moon.ppm";
+				break;
+			case 3:
+				fileName = "mud.ppm";
+				break;
+			case 4:
+				fileName = "psych.ppm";
+				break;
+			case 5:
+				fileName = "spots.ppm";
+				break;
+			case 6:
+				fileName = "wood.ppm";
+		}
+
+		if ((fp = fopen("image.txt", "r")) == 0) {
+			printf("Error, failed to find the file named %s.\n", fileName);
+			exit(0);
+		} 
+
+		else {
+			while (fgets(instr, sizeof(instr), fp)) {
+				if (instr[0] == '#' || instr[0] == 'P') {
+					//skip reading in line
+				}
+
+				else {
+					if(header == 0) {
+						//run header info
+						buffer = strtok(instr, " ");
+						width = atoi(buffer);
+
+						heightMap = malloc(width * sizeof(float *));
+
+						buffer = strtok(NULL, " ");
+						height = atoi(buffer);
+
+						for(x = 0; x < width; x++){
+							heightMap[x] = malloc(height * sizeof(float));
+						}
+
+						header++;
+						x = 0;
+					}
+
+					else if( header == 1) {
+						depth = atof(instr);
+						header++;
+					}
+					else {
+					}
+				}
+			}
+		}
+
+	}
 
 	for(i=0; i<64; i++) {
 		for(j=0; j<64; j++) {
@@ -416,210 +494,6 @@ int  red, green, blue;
 	fclose(fp);
 }
 
-/* read data file and store in arrays */
-void readFile(char **argv) {
-FILE *fp;
-char instr[1024];
-char * buffer;
-int count = 0, x, z = 0, convertedNum, front = 0;
-float vector1x, vector1y, vector1z, vector2x, vector2y, vector2z, normalx, normaly, normalz;
-Triangle * curr, * node;
-
-
-	/* open file and print error message if name incorrect */
-	if ((fp = fopen(argv[1], "r")) == NULL) {
-		printf("ERROR, could not open file.\n");
-		printf("Usage: %s <filename>\n", argv[0]);
-		exit(1);
-	}
-
-	/* the code to read the input file goes here */
-	/* numlevels is set to the number of lines in the file not including the first comment line */
-	else {
-		while (fgets(instr, sizeof(instr), fp)) {
-			if (instr[0] == '#' || instr[0] == 'P') {
-				//skip reading in line
-			}
-
-			else {
-				if(count == 0) {
-					buffer = strtok(instr, " ");
-					width = atoi(buffer);
-
-					heightMap = malloc(width * sizeof(float *));
-
-					buffer = strtok(NULL, " ");
-					height = atoi(buffer);
-
-					for(x = 0; x < width; x++){
-						heightMap[x] = malloc(height * sizeof(float));
-					}
-
-					count++;
-					x = 0;
-				}
-
-				else if( count == 1) {
-					depth = atof(instr);
-					count++;
-				}
-
-				else {
-					buffer = strtok(instr, "  ");
-
-					while (buffer != NULL){
-						//printf("%d\n", atoi(buffer));
-						convertedNum = atof(buffer);
-
-						heightMap[x][z] = convertedNum;
-						if (convertedNum > maxDepth){
-							maxDepth = convertedNum;
-						}
-
-						x++;
-						if(x == width){
-							z++;
-							x = 0;
-						}
-						buffer = strtok(NULL, "  ");
-					}//end buffer
-				}
-			}//end else
-		}//end while
-		fclose(fp);
-
-		if(buffer == NULL){
-			node = (Triangle *)malloc(sizeof(Triangle));
-			node->v1 = (Vertex *)malloc(sizeof(Vertex));
-			node->v2 = (Vertex *)malloc(sizeof(Vertex));
-			node->v3 = (Vertex *)malloc(sizeof(Vertex));
-			curr->normal = (Normal *)malloc(sizeof(Normal));
-			node->nextTri = NULL;
-
-			for (x = 0; x < width-1; x++) { 
-				for (z = 0; z < height-1; z++) {
-
-					curr = (Triangle *)malloc(sizeof(Triangle));
-					curr->v1 = (Vertex *)malloc(sizeof(Vertex));
-					curr->v2 = (Vertex *)malloc(sizeof(Vertex));
-					curr->v3 = (Vertex *)malloc(sizeof(Vertex));
-					curr->normal = (Normal *)malloc(sizeof(Normal));
-					curr->nextTri = NULL;
-
-					//top left triangle
-					curr->v1->x = x;
-					curr->v1->y = heightMap[x][z];
-					curr->v1->z = z;
-
-					curr->v2->x = x;
-					curr->v2->y = heightMap[x][z+1];
-					curr->v2->z = z+1;
-
-					curr->v3->x = x+1;
-					curr->v3->y = heightMap[x+1][z];
-					curr->v3->z = z;
-
-					vector1x = x - x;
-					vector1y = (heightMap[(int)x][(int)z+1]) - (heightMap[(int)x][(int)z]);
-					vector1z = (z+1) - z;
-
-					vector2x = (x+1) - x;
-					vector2y = (heightMap[(int)x+1][(int)z]) - (heightMap[(int)x][(int)z]);
-					vector2z = z - z;
-
-					curr->normal->Nx = vector1y * vector2z - vector2y * vector1z;
-					curr->normal->Ny = vector1z * vector2x - vector2z * vector1x;
-					curr->normal->Nz = vector1x * vector2y - vector2x * vector1y;
-
-					if(front == 0){
-						
-						head = curr;
-						node = curr;
-						front = 1;
-
-						//free then remallo						
-						curr = (Triangle *)malloc(sizeof(Triangle));
-						curr->v1 = (Vertex *)malloc(sizeof(Vertex));
-						curr->v2 = (Vertex *)malloc(sizeof(Vertex));
-						curr->v3 = (Vertex *)malloc(sizeof(Vertex));
-						curr->normal = (Normal *)malloc(sizeof(Normal));
-						curr->nextTri = NULL;
-
-						//bottom right triangle
-						curr->v1->x = x;
-						curr->v1->y = heightMap[x][z+1];
-						curr->v1->z = z+1;
-
-						curr->v2->x = x+1;
-						curr->v2->y = heightMap[x+1][z+1];
-						curr->v2->z = z+1;
-
-						curr->v3->x = x+1;
-						curr->v3->y = heightMap[x+1][z];
-						curr->v3->z = z;
-
-						/* calculate Normal for bottom right triangle */
-						vector1x = (x+1) - x;
-						vector1y = (heightMap[(int)x+1][(int)z+1]) - (heightMap[(int)x][(int)z+1]);
-						vector1z = (z+1) - (z+1);
-
-						vector2x = (x+1) - x;
-						vector2y = (heightMap[(int)x+1][(int)z]) - (heightMap[(int)x][(int)z+1]);
-						vector2z = z - (z+1);
-
-						curr->normal->Nx = vector1y * vector2z - vector2y * vector1z;
-						curr->normal->Ny = vector1z * vector2x - vector2z * vector1x;
-						curr->normal->Nz = vector1x * vector2y - vector2x * vector1y;
-
-						node->nextTri = curr;
-						node = curr;						
-
-					}
-					else{
-						
-						node->nextTri = curr;
-						node = curr;						
-						curr = (Triangle *)malloc(sizeof(Triangle));
-						curr->v1 = (Vertex *)malloc(sizeof(Vertex));
-						curr->v2 = (Vertex *)malloc(sizeof(Vertex));
-						curr->v3 = (Vertex *)malloc(sizeof(Vertex));
-						curr->normal = (Normal *)malloc(sizeof(Normal));
-						curr->nextTri = NULL;
-
-						//bottom right triangle
-						curr->v1->x = x;
-						curr->v1->y = heightMap[x][z+1];
-						curr->v1->z = z+1;
-
-						curr->v2->x = x+1;
-						curr->v2->y = heightMap[x+1][z+1];
-						curr->v2->z = z+1;
-
-						curr->v3->x = x+1;
-						curr->v3->y = heightMap[x+1][z];
-						curr->v3->z = z;
-
-						/* calculate Normal for bottom right triangle */
-						vector1x = (x+1) - x;
-						vector1y = (heightMap[(int)x+1][(int)z+1]) - (heightMap[(int)x][(int)z+1]);
-						vector1z = (z+1) - (z+1);
-
-						vector2x = (x+1) - x;
-						vector2y = (heightMap[(int)x+1][(int)z]) - (heightMap[(int)x][(int)z+1]);
-						vector2z = z - (z+1);
-
-						curr->normal->Nx = vector1y * vector2z - vector2y * vector1z;
-						curr->normal->Ny = vector1z * vector2x - vector2z * vector1x;
-						curr->normal->Nz = vector1x * vector2y - vector2x * vector1y;
-
-						node->nextTri = curr;
-						node = curr;					
-					}
-				}
-			}
-		}//ends if buffer = NULL
-	}//end else	
-}
 
 /*  Main Loop
  *  Open window with initial window size, title bar, 
@@ -629,7 +503,7 @@ int main(int argc, char** argv)
 {
 
 	head = NULL;
-	//readFile(argv);
+	loadTexture();
 	glutInit(&argc, argv);
 	glutInitDisplayMode (GLUT_SINGLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowPosition(80, 80);
