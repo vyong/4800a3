@@ -6,14 +6,14 @@
 #include <string.h>
 #include <math.h>
 
-// #include <GL/gl.h>
-// #include <GL/glu.h>
-// #include <GL/glx.h>
-// #include <GL/glut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glx.h>
+#include <GL/glut.h>
 
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
+// #include <OpenGL/gl.h>
+// #include <OpenGL/glu.h>
+// #include <GLUT/glut.h>
 
 struct Vertexes {
 	float x, y, z;
@@ -43,7 +43,7 @@ float camX, camY, camZ;
 float deltaAngle = 0.0f;
 float deltaMove = 0;
 
-GLubyte  Image[64][64][4];
+GLubyte  ***Image;
 GLuint   textureID[7];
 static int directionalLight = 1;
 static GLfloat lightPosition[4];
@@ -64,8 +64,8 @@ enum {
 };
 
 void lightRotation(void) {
-	spin = spin + 1; /*MAC LINE */
-	//spin = spin + 0.1;
+	//spin = spin + 1; /*MAC LINE */
+	spin = spin + 0.1; //Ubuntu line
 
 	if(spin >= 360) {
 		spin = spin - 360;
@@ -520,14 +520,8 @@ int header = 0;
 						buffer = strtok(instr, " ");
 						width = atoi(buffer);
 
-						//heightMap = malloc(width * sizeof(float *));
-
 						buffer = strtok(NULL, " ");
 						height = atoi(buffer);
-
-						for(x = 0; x < width; x++){
-							//heightMap[x] = malloc(height * sizeof(float));
-						}
 
 						header++;
 						x = 0;
@@ -538,6 +532,7 @@ int header = 0;
 						header++;
 					}
 					else {
+
 					}
 				}
 			}
