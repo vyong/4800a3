@@ -520,8 +520,15 @@ int header = 0;
 						buffer = strtok(instr, " ");
 						width = atoi(buffer);
 
+						Image = malloc (sizeof(GLubyte) * width);
 						buffer = strtok(NULL, " ");
 						height = atoi(buffer);
+
+						for(i = 0; i < width; i++){
+							Image[i] = malloc(sizeof(GLubyte) * height)
+						}
+
+						for(j = 0; j < )
 
 						header++;
 						x = 0;
