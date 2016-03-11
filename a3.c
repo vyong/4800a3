@@ -109,9 +109,9 @@ void lightRotation(void) {
 		spin = spin - 360;
 	}
 
-	lightX = cos((spin * M_PI)/180) * 3;
+	lightX = cos((spin * M_PI)/180) * 4;
 	lightY = 3;
-	lightZ = sin((spin * M_PI)/180) * 3;
+	lightZ = sin((spin * M_PI)/180) * 4;
 	//printf("%f, %f, %f\n",lightX, lightY, lightZ);
 	glutPostRedisplay();
 }
@@ -282,6 +282,7 @@ Normal * normals;
 
 	glBegin(GL_TRIANGLES);
 		//Top
+		glNormal3f(0.0, 0.5, 0.0);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
@@ -348,11 +349,14 @@ Normal * normals;
 	
 	//glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
 
+	
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
 	glTranslated (lightX, lightY, lightZ);
 	glutIdleFunc(lightRotation);
-	glutWireCube (0.1);
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, red);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, red);
+	glutWireSphere (0.1, 15, 15);
 	glEnable (GL_LIGHTING);
 
 	glPopMatrix ();
@@ -371,7 +375,7 @@ void reshape(int w, int h)
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity ();
 	// Set the camera
-	gluLookAt(10, 15, 10,    // Look at point
+	gluLookAt(10, 10, 10,    // Look at point
 			0, -20, 0,
 			0, 1, 0); 
 }
@@ -469,17 +473,15 @@ void mouse(int button, int state, int x, int y) {
 void motion(int x, int y) {
 	if(lButtonPressed >= 0){
 
-		camX = 5 * -sinf(20*(M_PI/180)) * cosf((5)*(M_PI/180));
-		camY = 5 * -sinf((5)*(M_PI/180));
-		camZ = -5 * cosf((5)*(M_PI/180)) * cosf((5)*(M_PI/180));
+		camX = 5 * -sin(20*(M_PI/180)) * cos((5)*(M_PI/180));
+		camY = 5 * -sin((5)*(M_PI/180));
+		camZ = -5 * cos((20)*(M_PI/180)) * cos((5)*(M_PI/180));
 		
 
 		glMatrixMode (GL_MODELVIEW);
 		glLoadIdentity ();
-		x = x%180;
-		y = y%180;
 
-		gluLookAt(x, 15, y,    // Look at point
+		gluLookAt(camX, camY, camZ,    // Look at point
 			0, -20, 0,
 			0, 1, 0); 
 		display ();
