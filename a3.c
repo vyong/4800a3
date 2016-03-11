@@ -6,20 +6,14 @@
 #include <string.h>
 #include <math.h>
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glx.h>
-#include <GL/glut.h>
+// #include <GL/gl.h>
+// #include <GL/glu.h>
+// #include <GL/glx.h>
+// #include <GL/glut.h>
 
-// #include <OpenGL/gl.h>
-// #include <OpenGL/glu.h>
-// #include <GLUT/glut.h>
-
-struct Vertexes {
-	float x, y, z;
-
-};
-typedef struct Vertexes Vertex;
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
 
 struct Normals {
 	float Nx, Ny, Nz;
@@ -31,29 +25,73 @@ typedef struct Normals Normal;
 int lineDrawing = 0;	// draw polygons as solid or lines
 int lighting = 1;	// use diffuse and specular lighting
 int smoothShading = 1;  // smooth or flat shading
-int textures = 0;
+int textures = 1;
 float spin = 0, lightHeight = 5;
+int textureFile = 0;
 
-float **heightMap;
 int width, height, depth, maxDepth = 0, lButtonPressed = 0, rButtonPressed = 0;
 float camX, camY, camZ;
+float lightX, lightY, lightZ;
 
 // the key states. These variables will be zero
 //when no key is being presses
 float deltaAngle = 0.0f;
 float deltaMove = 0;
 
-GLubyte  ***Image;
+GLubyte  *Image[7];
 GLuint   textureID[7];
-static int directionalLight = 1;
-static GLfloat lightPosition[4];
-static GLfloat floorPlane[4];
-static GLfloat floorShadow[4][4];
 static GLfloat floorVertices[4][3] = {
 	{0,-0.001,10},
 	{10,-0.001,10},
 	{10,-0.001, 0},
 	{0,-0.001, 0},
+};
+
+static GLfloat cube[30][3] = {
+	//Top
+	{0.5, 1, -0.5},
+	{-0.5, 1, -0.5},
+	{-0.5, 1, 0.5},
+
+	{0.5, 1, -0.5},
+	{-0.5, 1, 0.5},
+	{0.5, 1, 0.5},
+
+	//Right
+	{0.5, 0, -0.5},
+	{0.5, 1, -0.5},
+	{0.5, 1, 0.5},
+
+	{0.5, 0, -0.5},
+	{0.5, 1, 0.5},
+	{0.5, 0, 0.5},
+
+	//Front
+	{0.5, 0, 0.5},
+	{0.5, 1, 0.5},
+	{-0.5, 1, 0.5},
+
+	{0.5, 0, 0.5},
+	{-0.5, 1, 0.5},
+	{-0.5, 0, 0.5},
+
+	//Left
+	{-0.5, 0, 0.5},
+	{-0.5, 1, 0.5},
+	{-0.5, 1, -0.5},
+
+	{-0.5, 0, 0.5},
+	{-0.5, 1, -0.5},
+	{-0.5, 0, -0.5},
+
+	//Back
+	{0.5, 1, -0.5},
+	{0.5, 0, -0.5},
+	{-0.5, 0, -0.5},
+
+	{0.5, 1, -0.5},
+	{-0.5, 0, -0.5},
+	{-0.5, 1, -0.5}
 };
 
 enum {
@@ -64,13 +102,46 @@ enum {
 };
 
 void lightRotation(void) {
-	//spin = spin + 1; /*MAC LINE */
-	spin = spin + 0.1; //Ubuntu line
+	spin = spin + 1; /*MAC LINE */
+	//spin = spin + 0.1; //Ubuntu line
 
 	if(spin >= 360) {
 		spin = spin - 360;
 	}
+
+	lightX = cos((spin * M_PI)/180) * 3;
+	lightY = 3;
+	lightZ = sin((spin * M_PI)/180) * 3;
+	//printf("%f, %f, %f\n",lightX, lightY, lightZ);
 	glutPostRedisplay();
+}
+
+void makeShadows(void){
+	float shadow[4];
+	GLfloat * point;
+	GLfloat black[]   = {0.0, 0.0, 0.0, 0.0};
+	int i;
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, black);
+
+	for(i = 0; i < 30; i++){
+		point = cube[i];
+
+		shadow[0] = (lightY * point[0]) + ( -lightX * point[1]);
+		shadow[1] = 0;
+		shadow[2] = ( -lightZ * point[1]) + (lightY * point[2]);
+		shadow[3] = lightY;
+
+		shadow[0] = shadow[0] / shadow[3];
+		shadow[1] = shadow[1] / shadow[3];
+		shadow[2] = shadow[2] / shadow[3];
+		shadow[3] = shadow[3] / shadow[3];
+
+		//printf("%f, %f, %f, %f\n",shadow[0], shadow[1], shadow[2], shadow[3] );
+		//glVertex3f(point[0], point[1], point[2]);
+		glVertex3f(shadow[0], shadow[1], shadow[2]);
+	}
+
 }
 
 Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3, int y3, int z3){
@@ -91,58 +162,10 @@ Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3,
 	calculatedNormal -> Ny = vector1z * vector2x - vector2z * vector1x;
 	calculatedNormal -> Nz = vector1x * vector2y - vector2x * vector1y;
 
+	printf("%f, %f, %f\n", calculatedNormal -> Nx, calculatedNormal -> Ny, calculatedNormal -> Nz);
+
 	return calculatedNormal;
 }
-
-/* Find the plane equation given 3 points. */
-void findPlane(GLfloat plane[4], GLfloat v0[3], GLfloat v1[3], GLfloat v2[3]){
-	GLfloat vec0[3], vec1[3];
-
-	/* Need 2 vectors to find cross product. */
-	vec0[X] = v1[X] - v0[X];
-	vec0[Y] = v1[Y] - v0[Y];
-	vec0[Z] = v1[Z] - v0[Z];
-
-	vec1[X] = v2[X] - v0[X];
-	vec1[Y] = v2[Y] - v0[Y];
-	vec1[Z] = v2[Z] - v0[Z];
-
-	/* find cross product to get A, B, and C of plane equation */
-	plane[A] = vec0[Y] * vec1[Z] - vec0[Z] * vec1[Y];
-	plane[B] = -(vec0[X] * vec1[Z] - vec0[Z] * vec1[X]);
-	plane[C] = vec0[X] * vec1[Y] - vec0[Y] * vec1[X];
-
-	plane[D] = -(plane[A] * v0[X] + plane[B] * v0[Y] + plane[C] * v0[Z]);
-}
-
-void shadowMatrix(GLfloat shadowMat[4][4], GLfloat groundplane[4], GLfloat lightpos[4]) {
-	GLfloat dot;
-
-	/* Find dot product between light position vector and ground plane normal. */
-	dot = groundplane[X] * lightpos[X] + groundplane[Y] * lightpos[Y] + groundplane[Z] * lightpos[Z] + groundplane[W] * lightpos[W];
-
-	shadowMat[0][0] = dot - lightpos[X] * groundplane[X];
-	shadowMat[1][0] = 0.f - lightpos[X] * groundplane[Y];
-	shadowMat[2][0] = 0.f - lightpos[X] * groundplane[Z];
-	shadowMat[3][0] = 0.f - lightpos[X] * groundplane[W];
-
-	shadowMat[X][1] = 0.f - lightpos[Y] * groundplane[X];
-	shadowMat[1][1] = dot - lightpos[Y] * groundplane[Y];
-	shadowMat[2][1] = 0.f - lightpos[Y] * groundplane[Z];
-	shadowMat[3][1] = 0.f - lightpos[Y] * groundplane[W];
-
-	shadowMat[X][2] = 0.f - lightpos[Z] * groundplane[X];
-	shadowMat[1][2] = 0.f - lightpos[Z] * groundplane[Y];
-	shadowMat[2][2] = dot - lightpos[Z] * groundplane[Z];
-	shadowMat[3][2] = 0.f - lightpos[Z] * groundplane[W];
-
-	shadowMat[X][3] = 0.f - lightpos[W] * groundplane[X];
-	shadowMat[1][3] = 0.f - lightpos[W] * groundplane[Y];
-	shadowMat[2][3] = 0.f - lightpos[W] * groundplane[Z];
-	shadowMat[3][3] = dot - lightpos[W] * groundplane[W];
-
-}
-
 
 /*  Initialize material property and light source.
  */
@@ -180,10 +203,12 @@ GLfloat blue[]  = {0.0, 0.0, 1.0, 1.0};
 GLfloat red[]   = {1.0, 0.0, 0.0, 1.0};
 GLfloat green[] = {0.0, 1.0, 0.0, 1.0};
 GLfloat white[] = {1.0, 1.0, 1.0, 1.0};
-GLfloat light_gray[] = {0.3, 0.3, 0.3, 0.3};
+GLfloat light_gray[] = {0.8, 0.8, 0.8, 0.8};
 GLfloat brown[] = {0.5, 0.35, 0.05, 0.35};
 GLfloat random[] = {1.0, 1.0, 1.0, 1.0};
-GLfloat position[] = { 0.0, 0.0, 1.5, 1.0 };
+GLfloat position[] = { lightX, lightY, lightZ, 1.0 };
+GLfloat light_full_off[] = {0.0, 0.0, 0.0, 1.0};
+GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
 
 float bottomThirdLimit, topThirdLimit;
 float randomR, randomG, randomB;
@@ -205,19 +230,43 @@ Normal * normals;
 
 	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, light_gray);
-	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 	//draw plane
-	glBegin(GL_QUADS);
-		glVertex3f( 0,-0.001, 0);
-		glVertex3f( 0,-0.001,10);
-		glVertex3f(10,-0.001,10);
-		glVertex3f(10,-0.001, 0);
+
+	glLightfv (GL_LIGHT0, GL_DIFFUSE, light_full_off);
+
+	glBegin(GL_TRIANGLES);
+		glVertex3f( 0,-0.5, 0);
+		glVertex3f( 0,-0.5,10);
+		glVertex3f(10,-0.5,10);
+
+		glVertex3f( 0,-0.5, 0);
+		glVertex3f(10,-0.5,10);
+		glVertex3f(10,-0.5, 0);
 	glEnd();
+
+	glLightfv (GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+
+	// glBegin(GL_QUADS);
+	// 	//glNormal3f( 0,-0.001, 0);
+	// 	glVertex3f( 0,-0.001, 0);
+
+	// 	//glNormal3f( 0,-0.001,10);
+	// 	glVertex3f( 0,-0.001,10);
+
+	// 	//glNormal3f(10,-0.001,10);
+	// 	glVertex3f(10,-0.001,10);
+
+	// 	//glNormal3f(10,-0.001, 0);
+	// 	glVertex3f(10,-0.001, 0);
+	// glEnd();
 
 	/* turn texturing on */
 	if (textures == 1) {
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, textureID[0]); //change texture
+		glBindTexture(GL_TEXTURE_2D, textureID[textureFile]); //change texture
+		if(textureFile == 7){
+			textureFile = 0;
+		}
 	/* if textured, then use white as base colour */
 		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, light_gray);
 	}
@@ -227,31 +276,16 @@ Normal * normals;
 	glTranslatef(5,0.5,5);
 	//normals = (Normal *)malloc(sizeof(Normal));
 
-	//glutSolidCube(1);
-
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
+	//glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
 	glBegin(GL_TRIANGLES);
-		//Bottom
-		glNormal3f(0.0, -0.5, 0.0);
-		glVertex3f(0.5, -0.5, -0.5);
-		glVertex3f(0.5, -0.5, 0.5);
-		glVertex3f(-0.5, -0.5, 0.5);
-
-		glNormal3f(0.0, -0.5, 0.0);
-		glVertex3f(0.5, -0.5, -0.5);
-		glVertex3f(-0.5, -0.5, 0.5);
-		glVertex3f(-0.5, -0.5, -0.5);
-
 		//Top
-		glNormal3f(-0.5, -0.5, -0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 
-		glNormal3f(0.5, 0.5, 0.5);
 		glVertex3f(0.5, 0.5, -0.5);
 		glVertex3f(-0.5, 0.5, 0.5);
 		glVertex3f(0.5, 0.5, 0.5);
@@ -301,29 +335,25 @@ Normal * normals;
 		glVertex3f(-0.5, 0.5, -0.5);
 	glEnd();
 
-	if (textures == 1) 
+	if (textures == 1){
 		glDisable(GL_TEXTURE_2D);
+	}
 
-	glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
+	glTranslatef(0,-0.5,0);
+	glBegin(GL_TRIANGLES);
+		makeShadows();
+	glEnd();
+
+	glTranslatef(0,0.5,0);
+	
+	//glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
+
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
-	glTranslated (1.0, 3.0, 3.0);
+	glTranslated (lightX, lightY, lightZ);
 	glutIdleFunc(lightRotation);
 	glutWireCube (0.1);
 	glEnable (GL_LIGHTING);
-
-	  /* Reposition the light source. */
-	lightPosition[0] = 12*cos(spin);
-	lightPosition[1] = lightHeight;
-	lightPosition[2] = 12*sin(spin);
-	if (directionalLight) {
-		lightPosition[3] = 0.0;
-	} else {
-		lightPosition[3] = 1.0;
-	}
-
-	shadowMatrix(floorShadow, floorPlane, lightPosition);
-	glMultMatrixf((GLfloat *) floorShadow);
 
 	glPopMatrix ();
 
@@ -343,7 +373,7 @@ void reshape(int w, int h)
 	// Set the camera
 	gluLookAt(10, 15, 10,    // Look at point
 			0, -20, 0,
-			0, 1, 0);   // Up vector
+			0, 1, 0); 
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -353,13 +383,14 @@ void keyboard(unsigned char key, int x, int y)
 		case 'q':
 			exit(0);
 			break;
-		case '1':		// draw polygons as outlines
-			lineDrawing = 1;
-			lighting = 0;
-			smoothShading = 0;
-			textures = 0;
+		case '1':		// texture with  smooth shading
+			lineDrawing = 0;
+			lighting = 1;
+			smoothShading = 1;
+			textures = 1;
 			init();
 			display();
+			textureFile++;
 			break;
 		case '2':		// draw polygons as outlines
 			lineDrawing = 1;
@@ -385,26 +416,19 @@ void keyboard(unsigned char key, int x, int y)
 			init();
 			display();
 			break;
-		case '5':		// texture with  smooth shading
-			lineDrawing = 0;
-			lighting = 1;
-			smoothShading = 1;
-			textures = 1;
-			init();
-			display();
-			break;
+		
 		case 'w':		// draw polygons as outlines
-			glTranslatef(0.0, 0.0, 0.5);
+			glRotatef(5, 1.0, 0.5, 0.0);
 			init();
 			display();
 			break;
 		case 'd':		// draw polygons as outlines
-			glTranslatef(-1.0, 0.0, 0.0);
+			glRotatef(5, 0.0, 0.5, 0.0);
 			init();
 			display();
 			break;
 		case 'a':		// draw polygons as outlines
-			glTranslatef(1.0, 0.0, 0.0);
+			glRotatef(5, 1.0, -1.0, -1.0);
 			init();
 			display();
 			break;
@@ -445,17 +469,19 @@ void mouse(int button, int state, int x, int y) {
 void motion(int x, int y) {
 	if(lButtonPressed >= 0){
 
-		camX = -(x-500) * -sinf(10*(M_PI/180)) * cosf((45)*(M_PI/180));
-		camY = -(x-500) * -sinf((45)*(M_PI/180));
-		camZ = (x-500) * cosf((10)*(M_PI/180)) * cosf((45)*(M_PI/180));
+		camX = 5 * -sinf(20*(M_PI/180)) * cosf((5)*(M_PI/180));
+		camY = 5 * -sinf((5)*(M_PI/180));
+		camZ = -5 * cosf((5)*(M_PI/180)) * cosf((5)*(M_PI/180));
 		
 
 		glMatrixMode (GL_MODELVIEW);
 		glLoadIdentity ();
+		x = x%180;
+		y = y%180;
 
-		gluLookAt(camX,camZ,camY,   // Camera position
-		  0, -20, 0,
-			0, 1, 0);   // Up vector
+		gluLookAt(x, 15, y,    // Look at point
+			0, -20, 0,
+			0, 1, 0); 
 		display ();
 	}
 
@@ -472,38 +498,43 @@ void motion(int x, int y) {
 }
 
 void loadTexture() {
-FILE *fp;
-int  i, j, x;
-int  red, green, blue;
-char * fileName, * buffer;
-char instr[1024];
-int header = 0;
+	FILE *fp;
+	int  i, j, x;
+	int  red, green, blue;
+	char * fileName, * buffer;
+	char instr[1024];
+	int header = 0;
+
+	glGenTextures(7,textureID);
 
 	for (x = 0; x < 7; x++){
 		switch(x) {
 			case 0:
-				fileName = "brick.ppm";
+				fileName = "images/brick.ppm";
 				break;
 			case 1:
-				fileName = "horrible.ppm";
+				fileName = "images/horrible.ppm";
 				break;
 			case 2:
-				fileName = "moon.ppm";
+				fileName = "images/moon.ppm";
 				break;
 			case 3:
-				fileName = "mud.ppm";
+				fileName = "images/mud.ppm";
 				break;
 			case 4:
-				fileName = "psych.ppm";
+				fileName = "images/psych.ppm";
 				break;
 			case 5:
-				fileName = "spots.ppm";
+				fileName = "images/spots.ppm";
 				break;
 			case 6:
-				fileName = "wood.ppm";
+				fileName = "images/wood.ppm";
 		}
 
-		if ((fp = fopen("image.txt", "r")) == 0) {
+		header = 0;
+		i = 0;
+
+		if ((fp = fopen(fileName, "r")) == 0) {
 			printf("Error, failed to find the file named %s.\n", fileName);
 			exit(0);
 		} 
@@ -520,57 +551,52 @@ int header = 0;
 						buffer = strtok(instr, " ");
 						width = atoi(buffer);
 
-						Image = malloc (sizeof(GLubyte) * width);
 						buffer = strtok(NULL, " ");
 						height = atoi(buffer);
 
-						for(i = 0; i < width; i++){
-							Image[i] = malloc(sizeof(GLubyte) * height)
-						}
-
-						for(j = 0; j < )
-
+						Image[x] = malloc (sizeof(GLubyte) * width * height * 4);
 						header++;
-						x = 0;
 					}
 
 					else if( header == 1) {
 						depth = atof(instr);
 						header++;
 					}
+
 					else {
+						buffer = strtok(instr, "  ");
+
+						while (buffer != NULL){
+							//printf("%d\n", atoi(buffer));
+							Image[x][i] = atoi(buffer);
+							i++;
+
+							if(i % 4 == 0){
+								Image[x][i] = 255;
+								i++;
+							}
+
+							buffer = strtok(NULL, "  ");
+						}//end buffer
 
 					}
 				}
-			}
-		}
-
-	}
-
-	for(i=0; i<64; i++) {
-		for(j=0; j<64; j++) {
-			fscanf(fp, "%d %d %d", &red, &green, &blue);
-			Image[i][j][0] = red;
-			Image[i][j][1] = green;
-			Image[i][j][2] = blue;
-			Image[i][j][3] = 255;
-		}
-	}
+			}//end file loop
+		}//end located file
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glGenTextures(7,textureID);//
-	glBindTexture(GL_TEXTURE_2D, textureID[0]); //loop to include 7 files
+	glBindTexture(GL_TEXTURE_2D, textureID[x]); //loop to include 7 files
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA,
-		GL_UNSIGNED_BYTE, Image); //64 is from file
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+		GL_UNSIGNED_BYTE, Image[x]); 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 
-	fclose(fp);
+	}//end for loop
 }
 
 
@@ -593,8 +619,6 @@ int main(int argc, char** argv)
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 
-	/* Setup floor plane for projected shadow calculations. */
-	findPlane(floorPlane, floorVertices[1], floorVertices[2], floorVertices[3]);
 
 	glutMainLoop();
 	return 0; 
