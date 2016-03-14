@@ -15,12 +15,6 @@
 #include <OpenGL/glu.h>
 #include <GLUT/glut.h>
 
-struct Normals {
-	float Nx, Ny, Nz;
-
-};
-typedef struct Normals Normal;
-
 	/* flags used to control the appearance of the image */
 int lineDrawing = 0;	// draw polygons as solid or lines
 int lighting = 1;	// use diffuse and specular lighting
@@ -35,7 +29,7 @@ float lightX, lightY, lightZ;
 
 // the key states. These variables will be zero
 //when no key is being presses
-float deltaAngle = 0.0f;
+float deltaAngle = 10;
 float deltaMove = 0;
 
 GLubyte  *Image[7];
@@ -144,29 +138,6 @@ void makeShadows(void){
 
 }
 
-Normal * calculateNormal(int x1, int y1, int z1, int x2, int y2, int z2, int x3, int y3, int z3){
-	float vector1x, vector1y, vector1z, vector2x, vector2y, vector2z;
-	Normal * calculatedNormal;
-
-	//calculatedNormal = (Normal *)malloc(sizeof(Normal));
-
-	vector1x = x2 - x1;
-	vector1y = y2 - y1;
-	vector1z = z2 - z1;
-
-	vector2x = x3 - x1;
-	vector2y = y3 - y1;
-	vector2z = z3 - z1;
-
-	calculatedNormal -> Nx = vector1y * vector2z - vector2y * vector1z;
-	calculatedNormal -> Ny = vector1z * vector2x - vector2z * vector1x;
-	calculatedNormal -> Nz = vector1x * vector2y - vector2x * vector1y;
-
-	printf("%f, %f, %f\n", calculatedNormal -> Nx, calculatedNormal -> Ny, calculatedNormal -> Nz);
-
-	return calculatedNormal;
-}
-
 /*  Initialize material property and light source.
  */
 void init (void)
@@ -212,7 +183,6 @@ GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
 
 float bottomThirdLimit, topThirdLimit;
 float randomR, randomG, randomB;
-Normal * normals;
 
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -246,20 +216,6 @@ Normal * normals;
 
 	glLightfv (GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 
-	// glBegin(GL_QUADS);
-	// 	//glNormal3f( 0,-0.001, 0);
-	// 	glVertex3f( 0,-0.001, 0);
-
-	// 	//glNormal3f( 0,-0.001,10);
-	// 	glVertex3f( 0,-0.001,10);
-
-	// 	//glNormal3f(10,-0.001,10);
-	// 	glVertex3f(10,-0.001,10);
-
-	// 	//glNormal3f(10,-0.001, 0);
-	// 	glVertex3f(10,-0.001, 0);
-	// glEnd();
-
 	/* turn texturing on */
 	if (textures == 1) {
 		glEnable(GL_TEXTURE_2D);
@@ -274,10 +230,6 @@ Normal * normals;
 	glPushMatrix();
 
 	glTranslatef(5,0.5,5);
-	//normals = (Normal *)malloc(sizeof(Normal));
-
-	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
-	//glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
 	glBegin(GL_TRIANGLES);
@@ -347,15 +299,12 @@ Normal * normals;
 
 	glTranslatef(0,0.5,0);
 	
-	//glRotated ((GLdouble) spin, 0.0, 1.0, 0.0);
-
-	
 	glLightfv (GL_LIGHT0, GL_POSITION, position);
 
 	glTranslated (lightX, lightY, lightZ);
 	glutIdleFunc(lightRotation);
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, red);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, red);
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glutWireSphere (0.1, 15, 15);
 	glEnable (GL_LIGHTING);
 
@@ -368,15 +317,20 @@ Normal * normals;
 
 void reshape(int w, int h)
 {
+	camX = 10 * sin(deltaAngle * (M_PI/180)) + 5;
+	camY = 10;
+	camZ = 10 * cos(deltaAngle * (M_PI/180)) + 5;
+
 	glViewport (0, 0, (GLsizei) w, (GLsizei) h);
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity ();
 	gluPerspective(45.0, (GLfloat)w/(GLfloat)h, 1.0, 1000.0);
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity ();
+
 	// Set the camera
-	gluLookAt(10, 10, 10,    // Look at point
-			0, -20, 0,
+	gluLookAt(camX, camY, camZ,    // Look at point
+			5, 0, 5,
 			0, 1, 0); 
 }
 
@@ -392,9 +346,9 @@ void keyboard(unsigned char key, int x, int y)
 			lighting = 1;
 			smoothShading = 1;
 			textures = 1;
+			textureFile++;
 			init();
 			display();
-			textureFile++;
 			break;
 		case '2':		// draw polygons as outlines
 			lineDrawing = 1;
@@ -422,7 +376,9 @@ void keyboard(unsigned char key, int x, int y)
 			break;
 		
 		case 'w':		// draw polygons as outlines
-			glRotatef(5, 1.0, 0.5, 0.0);
+			gluLookAt(5, 5, 5,    // Look at point
+					  0, -20, 0,
+					  0, 1, 0); 
 			init();
 			display();
 			break;
@@ -473,30 +429,31 @@ void mouse(int button, int state, int x, int y) {
 void motion(int x, int y) {
 	if(lButtonPressed >= 0){
 
-		camX = 5 * -sin(20*(M_PI/180)) * cos((5)*(M_PI/180));
-		camY = 5 * -sin((5)*(M_PI/180));
-		camZ = -5 * cos((20)*(M_PI/180)) * cos((5)*(M_PI/180));
+		deltaAngle += 3;
+		camX = 10 * sin(deltaAngle * (M_PI/180)) + 5;
+		camY = 10;
+		camZ = 10 * cos(deltaAngle * (M_PI/180)) + 5;
 		
 
 		glMatrixMode (GL_MODELVIEW);
 		glLoadIdentity ();
 
 		gluLookAt(camX, camY, camZ,    // Look at point
-			0, -20, 0,
+			5, 0, 5,
 			0, 1, 0); 
 		display ();
 	}
 
-	else if(rButtonPressed >= 1){
-		glMatrixMode (GL_MODELVIEW);
-		glLoadIdentity ();
+	// else if(rButtonPressed >= 1){
+	// 	glMatrixMode (GL_MODELVIEW);
+	// 	glLoadIdentity ();
 
-		gluLookAt(x, y, 0,    // Look at point
-			width/2, 0, height/2,
-			0.0, 1.0, 0.0);   // Up vector
-		display ();
+	// 	gluLookAt(x, y, 0,    // Look at point
+	// 		5, 0, 5,
+	// 		0.0, 1.0, 0.0);   // Up vector
+	// 	display ();
 
-	}
+	// }
 }
 
 void loadTexture() {

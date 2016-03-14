@@ -7,7 +7,7 @@ March 14th, 2016
 **************
 Complications
 **************
-There are no complications for this program. Camera is disabled as that functionality is not 100% working.
+There are no complications for this program. Camera only rotates clockwise to see the cube from all perspectives. 
 
 ************
 Compilation
